@@ -1,0 +1,33 @@
+html{
+    height: 100%;
+}
+
+body { 
+    height: 100%;
+    font-family: Papyrus, Helvetica, Arial, sans-serif; 
+    background-color: #DEB887;
+    margin: 0; padding: 0; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#title{
+    font-size: 48px;
+    font-weight: bold;
+    padding: 32px;
+}
+
+button{
+    font-family: Papyrus;
+    background-color: gray;
+    color: black;
+    border-color: white;
+    border-radius: 8px;
+    padding: 0;
+    margin: 0;
+    border: 8px;
+    width: 10%;
+    height: 5%;
+}
