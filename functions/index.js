@@ -19,10 +19,20 @@ exports.joinGame = functions.https.onCall((data, context) => {
     id: playerId,
     name: username,
   }).then(() => {
-    console.log("Data added to the database");
-    return {result: "Success"};
   }).catch((error) => {
     console.error(error);
-    return {result: "Error"};
   });
 });
+
+// exports.cleanupDisconnectedUsers = functions.database.ref('/players/{uid}')
+// .onWrite((change, context) => {
+//   console.log("YOU DID IT\n\n\n\n\n\n\n\n")
+//   const user = change.after.val();
+//   if(!user || !user.isDisconnected) return null;
+//   const timeout = 5 * 60 * 1000;
+//   const ttl = new Date().getTime() + timeout;
+//   return change.after.ref.parent.child('ttl').set(ttl).then(() => {
+//     return change.after.ref.parent.child('isDisconnected')
+// .onDisconnect().set(true);
+//   });
+// })

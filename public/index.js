@@ -8,13 +8,10 @@ firebase.auth().onAuthStateChanged((user) => {
     let playerRef = firebase.database().ref(`players/${playerId}`);
     playerRef.set({
       id: playerId,
-      name: username
+      name: username,
     })
 
     playerRef.onDisconnect().remove();
-    window.onunload = () => {
-      playerRef.onDisconnect().cancel()
-    };
 
   } else {
     showSignIn();
@@ -26,14 +23,19 @@ function addLoginFunctionality(){
   document.querySelector("#signIn").addEventListener("submit", e => {
     e.preventDefault();
     let user = firebase.auth().currentUser;
-    let username = document.getElementById("username").value;
+    const username = document.getElementById("username").value;
     if(!user){
       firebase.auth().signInAnonymously()
         .then(() => {})  
         .catch((error) => {console.log(error)})
     }
-    user.updateProfile({ displayName: username })
+    user = firebase.auth().currentUser;
+    user.updateProfile({ 
+      displayName: username,
+      name: username
+    })
       .then(() => {
+        user.getIdToken(true);
         firebase.database().ref(`players/${user.uid}`).update({name: username});
         showGames();
       })
