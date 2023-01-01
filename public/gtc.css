@@ -38,6 +38,11 @@ button{
     height: 50%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: start;
     align-items: center;
+}
+
+.title{
+    font-weight: bold;
+    font-size: 36px;
 }

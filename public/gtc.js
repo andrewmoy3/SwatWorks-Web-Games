@@ -11,11 +11,11 @@ body.append(welcome);
 body.append(join);
 
 let playerList = document.createElement(`div`);
+let title = document.createElement(`div`);
+title.setAttribute("class","title")
+title.appendChild(document.createTextNode(`Waiting Room`));
 playerList.setAttribute("id","playerList")
-playerList.appendChild(document.createTextNode(`Waiting Room`));
-
-// const joinGame = firebase.functions().httpsCallable('joinGame');
-// joinGame({game: "gtc"});
+playerList.appendChild(title);
 
 let user = firebase.auth().currentUser;
 let playerId = user.uid;

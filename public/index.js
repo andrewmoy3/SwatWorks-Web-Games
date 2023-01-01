@@ -18,18 +18,9 @@ firebase.auth().onAuthStateChanged((user) => {
   }
 })
 
-//sign in anonymously
-function addLoginFunctionality(){
-  document.querySelector("#signIn").addEventListener("submit", e => {
-    e.preventDefault();
-    let user = firebase.auth().currentUser;
-    const username = document.getElementById("username").value;
-    if(!user){
-      firebase.auth().signInAnonymously()
-        .then(() => {})  
-        .catch((error) => {console.log(error)})
-    }
-    user = firebase.auth().currentUser;
+
+function update(username){
+  user = firebase.auth().currentUser;
     user.updateProfile({ 
       displayName: username,
       name: username
@@ -39,7 +30,23 @@ function addLoginFunctionality(){
         firebase.database().ref(`players/${user.uid}`).update({name: username});
         showGames();
       })
-      .catch((error) => {console.log(error)})  
+      .catch((error) => {console.log(error)})
+}
+
+//sign in anonymously
+function addLoginFunctionality(){
+  document.querySelector("#signIn").addEventListener("submit", e => {
+    e.preventDefault();
+    let user = firebase.auth().currentUser;
+    const username = document.getElementById("username").value;
+    if(!user){
+      firebase.auth().signInAnonymously()
+        .then(() => {update(username)})  
+        .catch((error) => {console.log(error)})
+    }
+    else{
+      update(username);
+    }
   });
 }; 
 
