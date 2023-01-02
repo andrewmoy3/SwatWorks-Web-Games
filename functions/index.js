@@ -16,20 +16,25 @@ exports.initGTC = functions.https.onCall((data, context) => {
   admin.database().ref('gtc').update({forest: 100, turn: 1})
 
   admin.database().ref('gtc/players').once('value').then(snapshot => {
-    const playersArr = Object.keys(snapshot.val())
+    const playersArr = snapshot.val() ? Object.keys(snapshot.val()) : [];
     const numPlayers = playersArr.length;
-    const numHouses = (numPlayers - 1) % 4 + 1;
+    const numHouses = Math.floor((numPlayers + 3) / 4);
     for(let i=0;i<numPlayers;i++){
       let playerId = playersArr[i];
       let playerName = snapshot.val()[playerId].name;
-      admin.database().ref(`gtc/houses/${playersArr[i]}`).set({name: playerName})
+      console.log(numHouses)
+      console.log(i%numHouses)
+      admin.database().ref(`gtc/houses/${i%numHouses+1}/${playersArr[i]}`).set({name: playerName})
     }
-    // for(const id in snapshot.val()){
-    //   let playerName = snapshot.val()[id].name;
-    //   let playerId = id;
-    // }
   })
 });
+
+exports.addPlayers = functions.https.onCall((data, context) => {
+  for(let i=0;i<20;i++){
+    admin.database().ref(`gtc/players/${i}`).set({id: i, name: i})
+  }
+})
+
 
 // exports.joinGame = functions.https.onCall((data, context) => {
 //   const playerId = context.auth.uid;

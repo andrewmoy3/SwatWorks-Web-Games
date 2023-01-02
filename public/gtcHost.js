@@ -33,3 +33,6 @@ button.addEventListener('click', (e) => {
     button.remove();
     initGame();
 })
+
+// const create = firebase.functions().httpsCallable('addPlayers');
+// create()
