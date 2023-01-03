@@ -13,26 +13,69 @@ exports.randomNumber = functions.https.onRequest((request, response) => {
 
 
 exports.initGTC = functions.https.onCall((data, context) => {
-  admin.database().ref('gtc').update({forest: 100, turn: 1})
+  admin.database().ref('gtc').update({forest: 100, turn: 1, maxWood: 2, 
+    plantWood: 1, sellWood: 1, buyWood: 3, guards: 0, start: Math.random()})
+  const players = admin.database().ref('gtc/players')
 
-  admin.database().ref('gtc/players').once('value').then(snapshot => {
-    const playersArr = snapshot.val() ? Object.keys(snapshot.val()) : [];
-    const numPlayers = playersArr.length;
-    const numHouses = Math.floor((numPlayers + 3) / 4);
-    for(let i=0;i<numPlayers;i++){
-      let playerId = playersArr[i];
-      let playerName = snapshot.val()[playerId].name;
-      console.log(numHouses)
-      console.log(i%numHouses)
-      admin.database().ref(`gtc/houses/${i%numHouses+1}/${playersArr[i]}`).set({name: playerName})
-    }
-  })
+  players.once('value')
+    .then(snapshot => {
+      const playersArr = snapshot.val() ? Object.keys(snapshot.val()) : [];
+      const numPlayers = playersArr.length;
+      const numHouses = Math.floor((numPlayers + 3) / 4);
+      for(let i=0;i<numPlayers;i++){
+        let playerId = playersArr[i];
+        let playerName = snapshot.val()[playerId].name;
+        admin.database().ref(`gtc/houses/${i%numHouses+1}/members/${playersArr[i]}`).set({name: playerName, turn: 1})
+      }
+      for(let i=1;i<numHouses+1;i++){
+        admin.database().ref(`gtc/houses/${i}`).update({money: 12})
+      };
+      admin.database().ref(`gtc/houses`).once(`value`).then(snapshot => {
+        const houses = Object.keys(snapshot.val());
+        for (house of houses){
+          let numMembers = 0;
+          const members = Object.keys(snapshot.val()[house]['members'])
+          for (member of members){numMembers += 1}
+          reqWood = Math.floor((numMembers+1)/2)
+          admin.database().ref(`gtc/houses/${house}`).update({reqWood: reqWood}) 
+        }
+      })
+    })
+    .catch(error => {
+      console.log(error);
+    })
 });
+
+exports.changeVars = functions.https.onCall(async (data, context) => {
+  return new Promise((resolve, reject) => {
+    const variable = data.var;
+    admin.database().ref(`gtc/${variable}`).once('value') 
+      .then(snapshot => {
+        const orig = snapshot.val();
+        let obj = {};
+
+        obj[data.var] = data.dir == 'up' ? orig + 1 : orig > 0? orig - 1 : 0; 
+        admin.database().ref(`gtc`).update(obj);
+        resolve();
+      })
+      .catch(error => {
+        reject(error);
+      });
+  });
+});
+
 
 exports.addPlayers = functions.https.onCall((data, context) => {
   for(let i=0;i<20;i++){
     admin.database().ref(`gtc/players/${i}`).set({id: i, name: i})
   }
+})
+
+exports.newTurn = functions.https.onCall((data, context) => {
+  admin.database().ref(`gtc/turn`).once(`value`).then(snapshot => {
+    const currentTurn = snapshot.val();
+    admin.database().ref(`gtc`).update({start: Math.random(), turn: currentTurn+1})
+  })
 })
 
 

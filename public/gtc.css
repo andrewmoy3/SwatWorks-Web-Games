@@ -28,8 +28,16 @@ button{
     padding: 0;
     margin: 0;
     border: 8px;
-    width: 10%;
-    height: 5%;
+    /* width: 10%;
+    height: 5%; */
+}
+
+#options{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    width: 25%;
+    height: 25%;
 }
 
 #playerList{
@@ -45,4 +53,39 @@ button{
 .title{
     font-weight: bold;
     font-size: 36px;
+}
+
+#subTitle{
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.variable{
+    display: flex;
+    justify-content: space-between;
+}
+
+.arrow {
+  display: inline-block;
+  font-size: 1.5em;
+  line-height: 1em;
+  vertical-align: middle;
+}
+
+.arrow.up {
+    border: solid black;
+    border-width: 0 2px 2px 0;
+    content: "";
+    display: inline-block;
+    padding: 3px;
+    transform: rotate(-135deg);
+  }
+  
+.arrow.down {
+border: solid black;
+border-width: 0 2px 2px 0;
+content: "";
+display: inline-block;
+padding: 3px;
+transform: rotate(45deg);
 }
