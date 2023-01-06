@@ -1,48 +1,72 @@
-let welcome = document.createElement(`div`);
-welcome.setAttribute("id","title")
-welcome.appendChild(document.createTextNode(`Welcome to Governing the Commons!`))
+function make(type, attribute, attrName,text){
+    let element = document.createElement(type);
+    if(attribute)element.setAttribute(attribute, attrName);
+    if(text)element.appendChild(document.createTextNode(text));
+    return element
+}
 
-console.log(`hjksdfhsdh`)
+function select(selector){
+    return document.querySelector(selector)
+}
 
-let playerList = document.createElement(`div`);
-let title = document.createElement(`div`);
-title.setAttribute("class","title")
-title.appendChild(document.createTextNode(`Players`));
-playerList.setAttribute("id","playerList")
-playerList.appendChild(title);
+function getId(){
+    return firebase.auth().currentUser.uid
+}
 
-let body = document.querySelector(`body`);
+function getRef(string){
+    return firebase.database().ref(string);
+}
+
+function readVal(string){
+    return firebase.database().ref(string).once(`value`).then(snapshot => {
+        return snapshot.val();
+    })
+}
+
+const create = firebase.functions().httpsCallable('addPlayers');
+create()
+
+const welcome = make(`div`,`id`,`title`,`Welcome to Governing the Commons!`);
+const title = make(`div`,`class`,`title`,`Players`)
+const waitingRoom = make(`div`,`id`,`waitingRoom`);
+const playerList = make(`div`,`id`,`playerList`);
+
+waitingRoom.appendChild(title);
+waitingRoom.appendChild(playerList)
+
+let body = select(`body`);
 body.append(welcome);
-body.append(playerList)
+body.append(waitingRoom);
 
-const stopListening = firebase.database().ref('gtc/players').on("child_added", (snapshot) => {
-    let player = document.createElement(`div`);
-    player.setAttribute("class","player")
-    player.appendChild(document.createTextNode(`${snapshot.val().name}`));
+const gameBody = make(`div`,`id`,`gameBody`);
+
+const stopListening = getRef('gtc/players').on("child_added", (snapshot) => {
+    let player = make(`div`,`class`,`player`,`${snapshot.val().name}`);
     playerList.appendChild(player);
 });
 
 
 const initGame = firebase.functions().httpsCallable('initGTC');
-let startGame = document.createElement('button');
-startGame.setAttribute("id","joinGame")
-startGame.appendChild(document.createTextNode(`Start Game!`));
+let startGame = make('button',`id`,`joinGame`,`Start Game!`);
 body.appendChild(startGame);
 
-const button = document.querySelector('#joinGame');
+const button = select('#joinGame');
 button.addEventListener('click', (e) => {
-    document.querySelector(`#title`).remove();
-    document.querySelector(`#playerList`).remove();
+    select(`#title`).remove();
+    select(`#waitingRoom`).remove();
     button.remove();
     initialize()
 })
 
 async function initialize() {
     await initGame();
-    showGame();
+    body.appendChild(gameBody);
+    showVars();
+    showHouses();
 }
   
-function showGame(){
+const runTurn = firebase.functions().httpsCallable(`runTurn`)
+function showVars(){
     const vars = {
         buyWood: `Buy Price`,
         maxWood: `Maximum wood per cutter`,
@@ -51,47 +75,61 @@ function showGame(){
         turn: `Turn`
     }
 
-    let subTitle = document.createElement(`div`);
-    subTitle.setAttribute("id",`subTitle`)
-    subTitle.appendChild(document.createTextNode(`Variables`))
-    body.appendChild(subTitle);
-    let variableDiv = document.createElement(`div`);
-    variableDiv.setAttribute("class",`container`)
-    body.appendChild(variableDiv)
+    let varContainer = make('div',`id`,`varContainer`);
+    let subTitle = make('div',`id`,`subTitle`,`Variables`);
+    varContainer.appendChild(subTitle);
+    let variableDiv = make('div',`class`,`container`);
+    varContainer.appendChild(variableDiv);
+    gameBody.appendChild(varContainer);
 
-    firebase.database().ref(`gtc`).once(`value`)
+    readVal(`gtc`)
         .then(snapshot => {
-            const root = snapshot.val();
+            const root = snapshot;
             const keys = Object.keys(root);
             for (variable in vars){
                 if(keys.includes(variable)){
-                    let x = document.createElement(`div`);
-                    x.setAttribute("class",`${variable}`)
-                    x.appendChild(document.createTextNode(`${vars[variable]}`))
-                    let value = document.createElement(`div`);
-                    value.setAttribute("id",`${variable}value`)
-                    value.appendChild(document.createTextNode(`${root[variable]}`))
-                    let inv = document.createElement(`div`);
+                    let x = make('div',`class`,`${variable}`,`${vars[variable]}`);
+                    let value = make('div',`id`,`${variable}value`,`${root[variable]}`);
+                    let inv = make('div',`class`,`varContainer`);
                     inv.appendChild(x);
                     inv.appendChild(value);
-                    const up = document.createElement(`button`)
-                    up.setAttribute('id', `up${variable}`)
+                    const up = make('button',`id`,`up${variable}`);
                     up.innerHTML = (`<i class="arrow up"></i>`)
-                    const down = document.createElement(`button`)
-                    down.setAttribute('id', `down${variable}`)
+                    const down = make('button',`id`,`down${variable}`);
                     down.innerHTML = (`<i class="arrow down"></i>`)
 
-                    let varContainer = document.createElement(`div`)
-                    varContainer.classList.add(`variable`)
-                    varContainer.appendChild(down);
-                    varContainer.appendChild(inv);
-                    varContainer.appendChild(up);
-                    variableDiv.appendChild(varContainer)
+                    const container = make('div',`class`,`variable`);
+                    container.appendChild(down);
+                    container.appendChild(inv);
+                    container.appendChild(up);
+                    variableDiv.appendChild(container)
                     setVarButtons(variable);
                 };
             }
+            const nextTurn = make(`button`,`id`,`nextTurn`,`Next Turn`)
+            gameBody.appendChild(nextTurn)
+            nextTurn.addEventListener(`click`, (e) => {
+                runTurn();
+            })
         })
         .catch(error => console.log(error))
+}
+
+function showHouses(){
+    firebase.database().ref(`gtc/houses`).once("value").then(snapshot => {
+        let i = 1;
+        const display = make(`div`,`id`,`display`)
+        while (i<Object.keys(snapshot.val()).length+1){
+            const house = make(`div`,`class`,`house`,`${i}`);
+            for(const member of Object.keys(snapshot.val()[i][`members`])){
+                const player = make(`div`,`class`,`player`,`${snapshot.val()[i][`members`][member]['name']}`)
+                house.appendChild(player)
+                }
+            display.appendChild(house)
+            i++;
+        }
+        gameBody.appendChild(display)
+      })
 }
 
 const changeVars = firebase.functions().httpsCallable('changeVars');
@@ -109,9 +147,7 @@ function setVarButtons(variable){
 async function updateVariableValues(dir, variable){
     await changeVars({dir: dir, var: variable});
     firebase.database().ref(`gtc/${variable}`).once("value").then(snapshot => {
-        console.log(snapshot.val())
         document.querySelector(`#${variable}value`).innerHTML = `${snapshot.val()}`;
     })
 }
-// const create = firebase.functions().httpsCallable('addPlayers');
-// create()
+

@@ -13,6 +13,26 @@ body {
     align-items: center;
 }
 
+#gameBody{
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+#housemates{
+    display: flex;
+    width: 25%;
+    justify-content: space-between;
+    align-items: center;
+}
+#varContainer, #display{
+    border: 4px solid black;
+    background-color: white;
+    border-radius: 10px;
+}
+
 #title{
     font-size: 48px;
     font-weight: bold;
@@ -27,7 +47,6 @@ button{
     border-radius: 8px;
     padding: 0;
     margin: 0;
-    border: 8px;
     /* width: 10%;
     height: 5%; */
 }
@@ -40,7 +59,7 @@ button{
     height: 25%;
 }
 
-#playerList{
+#waitingRoom{
     background-color: white;
     width: 50%;
     height: 50%;
@@ -48,11 +67,20 @@ button{
     flex-direction: column;
     justify-content: start;
     align-items: center;
+    padding: 20px;
+}
+
+#playerList{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 50px;
 }
 
 .title{
     font-weight: bold;
     font-size: 36px;
+    padding: 50px;
 }
 
 #subTitle{
@@ -60,9 +88,41 @@ button{
     font-weight: bold;
 }
 
+.selected{
+    border-width: 5px;
+    border-color: red;
+}
+
+#display{
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 20px;
+    width: 50%;
+    height: 50%;
+}
+
 .variable{
     display: flex;
     justify-content: space-between;
+}
+
+.varContainer{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.house{
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.house .player{
+    font-size: 16px;
+    font-weight: normal;
+    font-style: italic;
 }
 
 .arrow {
