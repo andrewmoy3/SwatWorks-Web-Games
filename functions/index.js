@@ -53,23 +53,23 @@ ${playersArr[i]}`).set({name: playerName});
       });
 });
 
-exports.changeVars = functions.https.onCall((data, context) => {
-  return new Promise((resolve, reject) => {
-    const variable = data.var;
-    admin.database().ref(`gtc/${variable}`).once("value")
-        .then((snapshot) => {
-          const orig = snapshot.val();
-          const obj = {};
+// exports.changeVars = functions.https.onCall((data, context) => {
+//   return new Promise((resolve, reject) => {
+//     const variable = data.var;
+//     admin.database().ref(`gtc/${variable}`).once("value")
+//         .then((snapshot) => {
+//           const orig = snapshot.val();
+//           const obj = {};
 
-          obj[data.var] = data.dir == "up" ? orig + 1 : orig > 0? orig - 1 : 0;
-          admin.database().ref("gtc").update(obj);
-          resolve();
-        })
-        .catch((error) => {
-          reject(error);
-        });
-  });
-});
+//           obj[data.var] = data.dir == "up" ? orig + 1 : orig > 0? orig - 1 : 0;
+//           admin.database().ref("gtc").update(obj);
+//           resolve();
+//         })
+//         .catch((error) => {
+//           reject(error);
+//         });
+//   });
+// });
 
 
 exports.addPlayers = functions.https.onCall((data, context) => {

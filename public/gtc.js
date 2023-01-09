@@ -135,7 +135,19 @@ function detectChange(move, element){
     for (let i = 0; i < choices.length; i++) {
         const choice = choices[i];
         choice.classList.remove('selected');
+        if (choice.id == `guard` && element.id != `guard`){
+            console.log(`subtract`)
+            readVal(`gtc/guards`).then(numGuards => {
+                getRef(`gtc`).update({guards: numGuards-1});
+            })
+        }else if(choice.id != `guard` && element.id == `guard`){
+            console.log(`add`)
+            readVal(`gtc/guards`).then(numGuards => {
+                getRef(`gtc`).update({guards: numGuards+1});
+            })
+        }
     }
+    
     element.classList.add(`selected`)
     readVal(`gtc/players/${getId()}/house`).then(house => {
         getRef(`gtc/houses/${house}/members/${getId()}`).update({move: move})
@@ -149,10 +161,17 @@ const stopListening = firebase.database().ref('gtc/players').on("child_added", (
     playerList.appendChild(player);
 });
 
+
+getRef(`gtc/turn`).on(`value`, snapshot => {
+    playTurn()
+})
 function playTurn(){
-    firebase.database().ref(`gtc`).once(`value`).then(snapshot => {
-        console.log(snapshot.val())
-    })
+    const choices = document.querySelectorAll(`.selected`);
+    for (let i = 0; i < choices.length; i++) {
+        const choice = choices[i];
+        choice.classList.remove('selected');
+    }
+
 }
 
 

@@ -9,10 +9,6 @@ function select(selector){
     return document.querySelector(selector)
 }
 
-function getId(){
-    return firebase.auth().currentUser.uid
-}
-
 function getRef(string){
     return firebase.database().ref(string);
 }
@@ -39,12 +35,12 @@ body.append(welcome);
 body.append(waitingRoom);
 
 const gameBody = make(`div`,`id`,`gameBody`);
+const header = make(`div`,`id`,`header`,`Governing the Commons`);
 
 const stopListening = getRef('gtc/players').on("child_added", (snapshot) => {
     let player = make(`div`,`class`,`player`,`${snapshot.val().name}`);
     playerList.appendChild(player);
 });
-
 
 const initGame = firebase.functions().httpsCallable('initGTC');
 let startGame = make('button',`id`,`joinGame`,`Start Game!`);
@@ -60,27 +56,40 @@ button.addEventListener('click', (e) => {
 
 async function initialize() {
     await initGame();
+    body.appendChild(header);
     body.appendChild(gameBody);
     showVars();
     showHouses();
 }
   
-const runTurn = firebase.functions().httpsCallable(`runTurn`)
 function showVars(){
+
+    const constContainer = make('div',`id`,`constContainer`);
+    const varContainer = make('div',`id`,`varContainer`);
+    const subTitle = make('div',`class`,`subTitle`,`Variables`);
+    const constants = make('div',`id`,`constants`);
+    const constantTitle = make('div',`class`,`subTitle`,`Constants`);
+    const variableDiv = make('div',`class`,`container`);
+    const numGuards = make(`div`,`id`,`numGuards`,`Guards: 0`)
+
+    getRef(`gtc/guards`).on(`value`, (snapshot) => {
+        numGuards.innerHTML = `Guards: ${snapshot.val()}`
+    })
+
+    constants.appendChild(constantTitle);
+    constants.appendChild(numGuards);
+    varContainer.appendChild(subTitle);
+    varContainer.appendChild(variableDiv);
+    constContainer.appendChild(varContainer);
+    constContainer.appendChild(constants);
+    gameBody.appendChild(constContainer);
+
     const vars = {
         buyWood: `Buy Price`,
-        maxWood: `Maximum wood per cutter`,
-        plantWood: `Wood per planter`,
         sellWood: `Sell Price`,
-        turn: `Turn`
+        maxWood: `Max. wood per cutter`,
+        plantWood: `Wood per planter`
     }
-
-    let varContainer = make('div',`id`,`varContainer`);
-    let subTitle = make('div',`id`,`subTitle`,`Variables`);
-    varContainer.appendChild(subTitle);
-    let variableDiv = make('div',`class`,`container`);
-    varContainer.appendChild(variableDiv);
-    gameBody.appendChild(varContainer);
 
     readVal(`gtc`)
         .then(snapshot => {
@@ -107,7 +116,7 @@ function showVars(){
                 };
             }
             const nextTurn = make(`button`,`id`,`nextTurn`,`Next Turn`)
-            gameBody.appendChild(nextTurn)
+            body.appendChild(nextTurn)
             nextTurn.addEventListener(`click`, (e) => {
                 runTurn();
             })
@@ -116,38 +125,101 @@ function showVars(){
 }
 
 function showHouses(){
-    firebase.database().ref(`gtc/houses`).once("value").then(snapshot => {
-        let i = 1;
-        const display = make(`div`,`id`,`display`)
-        while (i<Object.keys(snapshot.val()).length+1){
+    const display = make(`div`,`id`,`display`)
+    gameBody.appendChild(display);
+    
+    readVal(`gtc/houses`).then(snapshot => {
+        for(let i=1;i<Object.keys(snapshot).length+1;i++){
             const house = make(`div`,`class`,`house`,`${i}`);
-            for(const member of Object.keys(snapshot.val()[i][`members`])){
-                const player = make(`div`,`class`,`player`,`${snapshot.val()[i][`members`][member]['name']}`)
+            readVal(`gtc/houses/${i}/money`).then(money => {
+                const up = make('button',`id`,`${i}moneyup`);
+                up.innerHTML = (`<i class="arrow up"></i>`)
+                const down = make('button',`id`,`${i}moneydown`);
+                down.innerHTML = (`<i class="arrow down"></i>`)
+                const houseMoneyContainer = make(`div`,`class`,`houseMoneyContainer`)
+                const houseMoney = make(`div`,`id`,`money${i}`,`Money: ${money}`)
+                houseMoney.classList.add(`houseMoney`)
+                up.addEventListener(`click`, (e) => incrementMoney('up',i))
+                down.addEventListener(`click`, (e) => incrementMoney('down',i))
+                houseMoneyContainer.appendChild(down);
+                houseMoneyContainer.appendChild(houseMoney);
+                houseMoneyContainer.appendChild(up);
+                house.insertBefore(houseMoneyContainer,house.childNodes[1])
+            })
+            for(const member of Object.keys(snapshot[i].members)){
+                const player = make(`div`,`class`,`player`,`${snapshot[i][`members`][member]['name']}`)
+                readVal(`gtc/players/${member}/house`).then(house => {
+                    const move = make(`div`,`class`,`move`)
+                    getRef(`gtc/houses/${house}/members/${member}`).update({move: null})
+                    player.appendChild(move)
+                    getRef(`gtc/houses/${house}/members/${member}/move`).on(`value`, (snapshot) => {
+                        if(snapshot.val()){
+                            move.innerHTML = `Move: ${snapshot.val()}`
+                            readVal(`gtc/guards`).then(guards => {
+                                document.getElementById(`numGuards`).innerHTML = `Guards: ${guards}`
+                            })
+                        }
+                        else{move.innerHTML = `Move: None`}
+                    })
+                    move.innerHTML = `Move: None`
+                })
                 house.appendChild(player)
                 }
             display.appendChild(house)
-            i++;
         }
-        gameBody.appendChild(display)
       })
 }
 
-const changeVars = firebase.functions().httpsCallable('changeVars');
+function incrementMoney(dir, house){
+    readVal(`gtc/houses/${house}/money`)
+        .then((snapshot) => {
+          const orig = snapshot;
+          const obj = {};
+
+          obj[`money`] = dir == "up" ? orig + 1 : orig - 1;
+          firebase.database().ref(`gtc/houses/${house}`).update(obj);
+          document.querySelector(`#money${house}`).innerHTML = `Money: ${obj.money}`;    
+        })
+        .catch((error) => {
+            console.log(error)
+        });
+}
+
 function setVarButtons(variable){
     const upButton = document.querySelector(`#up${variable}`)
-    upButton.addEventListener('click', async (e) => {
-        await updateVariableValues('up', variable);
+    upButton.addEventListener('click', (e) => {
+        updateVariableValues('up', variable);
     })
     const downButton = document.querySelector(`#down${variable}`)
     downButton.addEventListener('click', async (e) => {
-        await updateVariableValues('down', variable);
+        updateVariableValues('down', variable);
     })
 }
 
-async function updateVariableValues(dir, variable){
-    await changeVars({dir: dir, var: variable});
-    firebase.database().ref(`gtc/${variable}`).once("value").then(snapshot => {
-        document.querySelector(`#${variable}value`).innerHTML = `${snapshot.val()}`;
-    })
+function updateVariableValues(dir, variable){
+    readVal(`gtc/${variable}`)
+        .then((snapshot) => {
+          const orig = snapshot;
+          const obj = {};
+
+          obj[variable] = dir == "up" ? orig + 1 : orig > 0? orig - 1 : 0;;
+          console.log(snapshot)
+          console.log(obj.money)
+          firebase.database().ref("gtc").update(obj);
+          readVal(`gtc/${variable}`).then(snapshot => {
+            document.querySelector(`#${variable}value`).innerHTML = `${snapshot}`;
+            })
+        })
+        .catch((error) => {
+            console.log(error)
+        });
+    
+}
+
+const callTurn = firebase.functions().httpsCallable(`runTurn`)
+function runTurn(){
+    document.querySelector(`#display`).remove();
+    showHouses();
+    callTurn();
 }
 
