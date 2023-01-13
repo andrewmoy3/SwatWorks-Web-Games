@@ -22,6 +22,8 @@ function readVal(string){
         return snapshot.val();
     })
 }
+
+let playerHouse;
 const welcome = make(`div`,`id`,`title`,`Welcome to Governing the Commons!`);
 const join = make(`button`,`id`,`joinGame`,`Join Game!`)
 const title = make(`div`,`class`,`title`,`Waiting Room`)
@@ -35,81 +37,99 @@ let body = select(`body`);
 body.append(welcome);
 body.append(join);
 
-let user = firebase.auth().currentUser;
-let playerId = user.uid;
-let username = user.displayName;
-const playerRef = getRef(`gtc/players/${playerId}`);
-playerRef.set({
-    id: playerId,
-    name: username,
-})
-playerRef.onDisconnect().remove();
-
 const button = select('#joinGame');
 button.addEventListener('click', (e) => {
     document.querySelector(`#title`).remove();
     document.querySelector(`#joinGame`).remove();
+    let user = firebase.auth().currentUser;
+    let playerId = user.uid;
+    let username = user.displayName;
+    const playerRef = getRef(`gtc/players/${playerId}`);
+    playerRef.set({
+        id: playerId,
+        name: username,
+    })
+    playerRef.onDisconnect().remove();
     body.appendChild(waitingRoom)
     let inGame = false;
     readVal(`gtc/houses`).then(snapshot => {
-        let i = 1;
-        while (inGame == false && i<Object.keys(snapshot).length+1){
-            if(Object.keys(snapshot[i]['members']).includes(getId())){
-                getRef(`gtc/players/${getId()}`).update({house: i})
-                showGame()
-                inGame = true;
+        if(snapshot){
+            let i = 1;
+            while (inGame == false && i<Object.keys(snapshot).length+1){
+                if(Object.keys(snapshot[i]['members']).includes(getId())){
+                    getRef(`gtc/players/${getId()}`).update({house: i})
+                    playerHouse = i;
+                    getRef(`gtc/turn`).on(`value`, snapshot => {
+                        playTurn()
+                    })                    
+                    inGame = true;
+                }
+                i += 1;
             }
-            i += 1;
+        }
+        else{
+            getRef(`gtc/turn`).on(`value`, snapshot => {
+                if(snapshot.val())playTurn();
+            })                        
+            getRef('gtc/start').off()
         }
     })
-    if(inGame == false){
-        readVal('gtc/start').then((result) => {
-            getRef('gtc/start').on("value", (snapshot) => {
-                if(snapshot.val() != result){
-                    showGame()
-                    getRef('gtc/start').off()
-                }
-            })        
-        });
-    }
 })
 
 function showGame(){
-    if(select('#options'))return;
-    const playerList = select(`#playerList`)
-    if(playerList)playerList.remove();
+    const waitingRoom = select(`#waitingRoom`)
+    if(waitingRoom)waitingRoom.remove();
 
-    //show housemates
+    if(!select(`#housemates`))body.appendChild(makeHousemates())
+    body.insertBefore(makeForest(),body.childNodes[2])
+    if(!select(`#options`))body.appendChild(makeOptions())
+}
+function makeHousemates(){
     const houseMates = make(`div`,`id`,`housemates`,`Housemates:`)
-    readVal(`gtc/players/${getId()}/house`).then(house => {
-        readVal(`gtc/houses/${house}/members`).then(snapshot => {
-            const members = Object.keys(snapshot);
-            const selfId = getId();
-            for (let i=0;i<members.length;i++){
-                if(members[i]!=selfId){
-                    const houseMate = make(`div`,`class`,`houseMate`,`${snapshot[members[i]].name}`)
-                    houseMates.appendChild(houseMate)
-                }
+    readVal(`gtc/houses/${playerHouse}/members`).then(snapshot => {
+        const members = Object.keys(snapshot);
+        const selfId = getId();
+        for (let i=0;i<members.length;i++){
+            if(members[i]!=selfId){
+                const houseMate = make(`div`,`class`,`houseMate`,`${snapshot[members[i]].name}`)
+                houseMates.appendChild(houseMate)
             }
-        })
+        }
     })
-
-
+    return houseMates;
+}
+function makeForest(){
+    if(select(`#forest`)){select(`#forest`).remove()};
+    let forest = make(`div`,`id`,`forest`);
+    readVal(`gtc/forest`).then(snapshot => {
+        forest.innerHTML = `Forest: ${snapshot} trees`;
+    })
+    return forest;
+}
+function makeOptions(){
     //make options to choose
     let options = make(`div`,`id`,`options`)
-    let forest = make(`div`,`id`,`forest`)
-    readVal(`gtc/forest`).then(snapshot => {
-        forest.appendChild(document.createTextNode(`Forest: ${snapshot} trees`))
-    })
+    readVal(`gtc/houses/${playerHouse}/members/${getId()}/gatherWood`).then(val => {
+        const gatherContainer = make(`div`,`id`,`gatherContainer`)
 
+        const gather = make(`button`,`id`,`gather`,`Gather ${val} wood from forest: `)
+        const gatherup = make('button',`id`,`gatherup`);
+        gatherup.innerHTML = (`<i class="arrow up"></i>`)
+        const gatherdown = make('button',`id`,`gatherdown`);
+        gatherdown.innerHTML = (`<i class="arrow down"></i>`)
 
-    readVal(`gtc/maxWood`).then(val => {
-        let gather = make(`button`,`id`,`plant`,`Gather ${val} wood from forest: `)
-        options.insertBefore(gather, options.childNodes[0])
-        gather.addEventListener('click', (e) => {detectChange(`gather`, gather)})
-        getRef('gtc/maxWood').on("value", (snapshot) => {
-            gather.innerHTML = `Gather ${snapshot.val()} wood from forest`
+        gatherContainer.appendChild(gatherdown)
+        gatherContainer.appendChild(gather)
+        gatherContainer.appendChild(gatherup)
+        readVal(`gtc/maxWood`).then(max => {
+            if(val>max){gather.classList.add(`violation`)
+            gather.innerHTML += `Violation! You could be punished for gathering too much wood.`
+            }
+            gatherup.addEventListener(`click`, (e) => increment('up'))
+            gatherdown.addEventListener(`click`, (e) => increment('down'))
         })
+        options.insertBefore(gatherContainer, options.childNodes[0])
+        gather.addEventListener('click', (e) => {detectChange(`gather`, gather)})
     })
 
     let guard = make(`button`,`id`,`guard`,`Protect the forest: `)
@@ -125,32 +145,105 @@ function showGame(){
         })
     })
 
-    body.appendChild(houseMates)
-    body.appendChild(forest)
-    body.appendChild(options)
+    readVal(`gtc/houses/${playerHouse}/members/${getId()}/move`).then(move => {
+            if(move)document.getElementById(`${move}`).classList.add(`selected`)
+        }
+    )
+
+    return options;
+}
+
+function increment(dir){
+    let max;
+    readVal(`gtc/maxWood`).then(maxWood => max = maxWood)
+    readVal(`gtc/houses/${playerHouse}/members/${getId()}`)
+        .then((player) => {
+          let gatherWood = player.gatherWood;
+          const newWood = dir == "up" ? gatherWood < 10? gatherWood + 1 : 10 : gatherWood > 0 ? gatherWood - 1 : 0;
+          if(document.querySelector(`.selected`)){
+            if(newWood > gatherWood && document.querySelector(`.selected`).id == `gather`){
+                readVal(`gtc/houses/${playerHouse}/currentWood`).then(currentWood => {
+                    getRef(`gtc/houses/${playerHouse}`).update({currentWood: currentWood+1});
+                })
+            }
+            if(newWood < gatherWood && document.querySelector(`.selected`).id == `gather`){
+                readVal(`gtc/houses/${playerHouse}/currentWood`).then(currentWood => {
+                    getRef(`gtc/houses/${playerHouse}`).update({currentWood: currentWood-1});
+                })
+            }
+        }
+          getRef(`gtc/houses/${playerHouse}/members/${getId()}`).update({gatherWood: newWood});
+          gatherButton = document.querySelector(`#gather`)
+          let buttonMessage = `Gather ${newWood} wood from forest`;
+          if(newWood > max){
+            gatherButton.classList.add(`violation`)
+            buttonMessage += `(Violation! You could be punished for gathering too much wood.)`
+          }else{
+            gatherButton.classList.remove(`violation`)
+          }
+          gatherButton.innerHTML = buttonMessage;    
+        })
+        .catch((error) => {
+            console.log(error)
+        });
 }
 
 function detectChange(move, element){
-    const choices = document.querySelectorAll(`.selected`);
-    for (let i = 0; i < choices.length; i++) {
-        const choice = choices[i];
-        choice.classList.remove('selected');
+    readVal(`gtc/freeze`).then(async (freeze) => {
+        if(freeze == `true`)return;
+
+        const choices = document.querySelectorAll(`.selected`);
+        let choice = {id: `none`};
+        if(choices[0]){
+            choice = choices[0];
+            choice.classList.remove('selected');
+        }
+        //increments/decrements database guard count
         if (choice.id == `guard` && element.id != `guard`){
-            console.log(`subtract`)
             readVal(`gtc/guards`).then(numGuards => {
                 getRef(`gtc`).update({guards: numGuards-1});
             })
         }else if(choice.id != `guard` && element.id == `guard`){
-            console.log(`add`)
             readVal(`gtc/guards`).then(numGuards => {
                 getRef(`gtc`).update({guards: numGuards+1});
             })
         }
-    }
-    
-    element.classList.add(`selected`)
-    readVal(`gtc/players/${getId()}/house`).then(house => {
-        getRef(`gtc/houses/${house}/members/${getId()}`).update({move: move})
+        // await delay(100);
+        //adds gathering wood to house's currentWood
+        if (choice.id == `gather` && element.id != `gather`){
+            readVal(`gtc/houses/${playerHouse}/members/${getId()}/gatherWood`).then(gatherWood => {
+                readVal(`gtc/houses/${playerHouse}/currentWood`).then(currentWood => {
+                    getRef(`gtc/houses/${playerHouse}`).update({currentWood: currentWood-gatherWood});
+                })
+            })
+        }else if(choice.id != `gather` && element.id == `gather`){
+            readVal(`gtc/houses/${playerHouse}/members/${getId()}/gatherWood`).then(gatherWood => {
+                readVal(`gtc/houses/${playerHouse}/currentWood`).then(currentWood => {
+                    getRef(`gtc/houses/${playerHouse}`).update({currentWood: currentWood+gatherWood});
+                })
+            })
+        }
+        //adds planting wood to house's currentWood
+        if (choice.id == `plant` && element.id != `plant`){
+            readVal(`gtc/plantWood`).then(async plantWood => {
+                await delay(100);
+                readVal(`gtc/houses/${playerHouse}/currentWood`).then(currentWood => {
+                    getRef(`gtc/houses/${playerHouse}`).update({currentWood: currentWood-plantWood});
+                })
+            })
+        }else if(choice.id != `plant` && element.id == `plant`){
+            readVal(`gtc/plantWood`).then(async plantWood => {
+                await delay(100);
+                readVal(`gtc/houses/${playerHouse}/currentWood`).then(currentWood => {
+                    getRef(`gtc/houses/${playerHouse}`).update({currentWood: currentWood+plantWood});
+                })
+            })
+        }
+
+        //adds red border, updates move in database
+        element.classList.add(`selected`)
+        getRef(`gtc/houses/${playerHouse}/members/${getId()}`).update({move: move})
+        
     })
 }
 
@@ -162,16 +255,23 @@ const stopListening = firebase.database().ref('gtc/players').on("child_added", (
 });
 
 
-getRef(`gtc/turn`).on(`value`, snapshot => {
-    playTurn()
-})
-function playTurn(){
+const delay = ms => new Promise(res => setTimeout(res, ms));
+async function playTurn(){
+    await delay(3000);
+    //changes move in database to null, resets visual of selected move
+    getRef(`gtc/houses/${playerHouse}/members/${getId()}`).update({move: null})
+    
     const choices = document.querySelectorAll(`.selected`);
     for (let i = 0; i < choices.length; i++) {
         const choice = choices[i];
         choice.classList.remove('selected');
     }
 
+
+    readVal(`gtc/players/${getId()}/house`).then(house => {
+        playerHouse = house;
+        showGame();
+    })
 }
 
 

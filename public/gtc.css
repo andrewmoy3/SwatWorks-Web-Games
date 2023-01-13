@@ -26,6 +26,28 @@ body {
     align-items: center;
 }
 
+#constContainer{
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#varContainer,#constants,#calc,#customRulesDiv{
+    width: 100%;
+}
+
+#customRulesDiv{
+    max-height: 25%;
+    overflow-y: auto;
+}
+
+#numberDiv{
+    display: flex;
+    justify-content: space-between;
+}
+
 #nextTurn{
     width: 10%;
     height: 5%;
@@ -39,7 +61,11 @@ body {
     align-items: center;
 }
 
-#varContainer, #display, #constants{
+#constContainer{
+    height: 100%;
+}
+
+#varContainer, #display, #constants, #calc, #customRulesDiv{
     border: 4px solid black;
     background-color: white;
     border-radius: 10px;
@@ -65,10 +91,19 @@ button{
 
 #options{
     display: flex;
+    flex-direction: column;
     flex-wrap: wrap;
     justify-content: space-evenly;
     width: 25%;
     height: 25%;
+}
+
+#gatherContainer{
+    display: flex;
+}
+
+.violation{
+    color: red;
 }
 
 #waitingRoom{
@@ -125,8 +160,15 @@ button{
     align-items: center;
 }
 
-.house{
+#violationsContainer{
+    display: flex;
+}
 
+.eliminated{
+    color: red;
+}
+
+.house{
     /* SWTICH TO GRID; */
     height: 100%;
     display: flex;
@@ -141,7 +183,12 @@ button{
     font-size: 24px;
 }
 
-.houseMoneyContainer{
+.house .currentWood{
+    font-weight: bold;
+    font-size: 24px;
+}
+
+.houseMoneyContainer, .currentWoodContainer{
     display: flex;
 
 }

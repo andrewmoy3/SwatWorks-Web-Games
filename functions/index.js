@@ -5,35 +5,31 @@ const functions = require("firebase-functions");
 
 admin.initializeApp();
 
-exports.randomNumber = functions.https.onRequest((request, response) => {
-  const number = Math.round(Math.random()*100);
-  console.log(number);
-  response.send(number.toString());
-});
-
-
 exports.initGTC = functions.https.onCall((data, context) => {
-  admin.database().ref("gtc").update({forest: 100, turn: 1, maxWood: 2,
-    plantWood: 1, sellWood: 1, buyWood: 3, guards: 0, start: Math.random()});
-  const players = admin.database().ref("gtc/players");
-
-  players.once("value")
+  admin.database().ref("gtc/players").once("value")
       .then((snapshot) => {
+        // creates the houses in database
         const playersArr = snapshot.val() ? Object.keys(snapshot.val()) : [];
         const numPlayers = playersArr.length;
         const numHouses = Math.floor((numPlayers + 3) / 4);
         for (let i=1; i<numHouses+1; i++) {
-          admin.database().ref(`gtc/houses/${i}`).update({money: 12});
-          admin.database().ref(`gtc/houses/${i}/members`).set({});
+          admin.database().ref(`gtc/houses/${i}`)
+              .update({money: 12, currentWood: 0, alive: "true"});
         }
-        for (let i=0; i<numPlayers; i++) {
-          const playerId = playersArr[i];
-          const playerName = snapshot.val()[playerId].name;
-          const house = i%numHouses+1;
-          admin.database().ref(`gtc/players/${playerId}`).update({house: house})
-          admin.database().ref(`gtc/houses/${house}/members/\
-${playersArr[i]}`).set({name: playerName});
-        }
+
+        admin.database().ref("gtc/maxWood").once("value").then((maxWood) => {
+          for (let i=0; i<numPlayers; i++) {
+            const playerId = playersArr[i];
+            const playerName = snapshot.val()[playerId].name;
+            const house = i%numHouses+1;
+            admin.database().ref(`gtc/players/${playerId}`)
+                .update({house: house});
+            admin.database().ref(`gtc/houses/${house}/members/\
+${playersArr[i]}`).set({name: playerName, gatherWood: maxWood.val()});
+          }
+        });
+
+        // calculates required amount of wood per house
         admin.database().ref("gtc/houses").once("value").then((snapshot) => {
           const houses = Object.keys(snapshot.val());
           for (const house of houses) {
@@ -44,15 +40,94 @@ ${playersArr[i]}`).set({name: playerName});
             }
             const reqWood = Math.floor((numMembers+1)/2);
             admin.database().ref(`gtc/houses/${house}`)
-.update({reqWood: reqWood});
+                .update({reqWood: reqWood});
           }
         });
+
+        // initializes initial conditions
+        admin.database().ref("gtc").update({
+          forest: 100, turn: 1, maxWood: 2, violations: 0,
+          plantWood: 1, sellWood: 1, buyWood: 3, guards: 0,
+          growthRate: 20, start: Math.random(), freeze: "false"});
       })
       .catch((error) => {
         console.log(error);
       });
 });
 
+exports.runTurn = functions.https.onCall((data, context) => {
+  // updates turn #, tree count in database
+  admin.database().ref("gtc").once("value").then((snapshot) => {
+    const currentTurn = snapshot.val().turn;
+
+    // runs through all houses in game
+    const buyWood = snapshot.val()["buyWood"];
+    const sellWood = snapshot.val()["sellWood"];
+
+    // does all of the computation for each house
+    const houses = Object.keys(snapshot.val().houses);
+    let forest = snapshot.val().forest;
+    for (const house of houses) {
+      if (snapshot.val().houses[house].alive == "true") {
+        const gatheredWood = snapshot.val().houses[house].currentWood;
+        let excessWood;
+        if (gatheredWood > forest) {
+          excessWood = forest - snapshot.val().houses[house].reqWood;
+          forest = 0;
+        } else {
+          excessWood = gatheredWood - snapshot.val().houses[house].reqWood;
+          forest = forest - gatheredWood;
+        }
+        admin.database().ref("gtc").update({forest: forest});
+        const houseRef = admin.database().ref(`gtc/houses/${house}`);
+        if (excessWood < 0) {
+          const cost = excessWood*buyWood;
+          const currentMoney = snapshot.val().houses[house].money;
+          const newMoney = currentMoney + cost;
+          houseRef.update({money: newMoney});
+          if (newMoney<0) {
+            houseRef.update({alive: "false"});
+          }
+        }
+        if (excessWood > 0) {
+          const sell = excessWood*sellWood;
+          const currentMoney = snapshot.val().houses[house].money;
+          const newMoney = currentMoney + sell;
+          houseRef.update({money: newMoney});
+        }
+        houseRef.update({currentWood: 0});
+        // console.log(snapshot.val().aliveHouses)
+        // for (const member of Object.keys
+        // (snapshot.val().houses[i]["members"])) {
+        //   // const move = snapshot.val()['houses']
+        // [i]["members"][member]["move"];
+        //   // console.log(maxWood)
+        //   admin.database().ref(`gtc/houses/${i}/mem
+        // bers/${member}`).update({gatherWood: maxWood});
+        // }
+      }
+    }
+    const newForest = Math.floor(forest * ((snapshot.val().growthRate/100)+1));
+    admin.database().ref("gtc")
+        .update({start: Math.random(), turn: currentTurn+1, violations: 0,
+          forest: newForest, freeze: "false", guards: 0});
+  });
+});
+
+
+exports.cleanData = functions.https.onCall((data, context) => {
+  admin.database().ref("gtc").set({});
+});
+
+exports.test = functions.https.onCall((data, context) => {
+  console.log("test reached");
+});
+
+exports.addPlayers = functions.https.onCall((data, context) => {
+  for (let i=0; i<20; i++) {
+    admin.database().ref(`gtc/players/${i}`).set({id: i, name: i});
+  }
+});
 // exports.changeVars = functions.https.onCall((data, context) => {
 //   return new Promise((resolve, reject) => {
 //     const variable = data.var;
@@ -61,7 +136,8 @@ ${playersArr[i]}`).set({name: playerName});
 //           const orig = snapshot.val();
 //           const obj = {};
 
-//           obj[data.var] = data.dir == "up" ? orig + 1 : orig > 0? orig - 1 : 0;
+//           obj[data.var] = data.dir == "up" ? orig
+// + 1 : orig > 0? orig - 1 : 0;
 //           admin.database().ref("gtc").update(obj);
 //           resolve();
 //         })
@@ -70,48 +146,6 @@ ${playersArr[i]}`).set({name: playerName});
 //         });
 //   });
 // });
-
-
-exports.addPlayers = functions.https.onCall((data, context) => {
-  for (let i=0; i<20; i++) {
-    admin.database().ref(`gtc/players/${i}`).set({id: i, name: i});
-  }
-});
-
-exports.runTurn = functions.https.onCall((data, context) => {
-  //updates turn # in database
-  admin.database().ref("gtc/turn").once("value").then((snapshot) => {
-    const currentTurn = snapshot.val();
-    admin.database().ref("gtc")
-        .update({start: Math.random(), turn: currentTurn+1});
-  });
-
-  let buyWood, plantWood, maxWood, sellwood;
-  admin.database().ref(`gtc`).once("value").then(snapshot => {
-    buyWood = snapshot.val()[`buyWood`]
-    plantWood = snapshot.val()[`plantWood`]
-    maxWood = snapshot.val()[`maxWood`]
-    sellwood = snapshot.val()[`sellwood`]
-  })
-  
-  //runs through all members in game
-  admin.database().ref(`gtc/houses`).once("value").then(snapshot => {
-    let i = 1;
-    let guards = 0;
-    //does all of the computation for each house
-    while (i<Object.keys(snapshot.val()).length+1){
-      let houseWood = 0;
-      for(const member of Object.keys(snapshot.val()[i][`members`])){
-        const move = snapshot.val()[i][`members`][member]['move']
-        if(move == `guard`) guard++;
-        if(move == `plant`) houseWood += plantWood;
-        if(move == `gather`) houseWood += maxWood;
-        }
-        i++;
-    }
-  })
-});
-
 
 // exports.joinGame = functions.https.onCall((data, context) => {
 //   const playerId = context.auth.uid;
