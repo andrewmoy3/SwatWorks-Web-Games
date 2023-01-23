@@ -42,12 +42,18 @@ continueGame.addEventListener(`click`, e => {
     showVars();
     showHouses();
 })
+
+function addPlayers(){
+    for (let i=0; i<20; i++) {
+        getRef(`gtc/players/${i}`).set({id: i, name: i});
+      }
+}
+
 createGame.addEventListener(`click`, e => {
     createGame.remove();
     continueGame.remove();
-    cleanData().then(() => {
-        // const addPlayers = firebase.functions().httpsCallable('addPlayers');
-        // addPlayers();
+    getRef('gtc').set({}).then(() => {
+        addPlayers();
         let startGame = make('button',`id`,`startGame`,`Start Game!`);
         getRef('gtc/players').on("child_added", (snapshot) => {
             let player = make(`div`,`class`,`player`,`${snapshot.val().name}`);
@@ -70,9 +76,6 @@ const header = make(`div`,`id`,`header`,`Governing the Commons`);
 
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
-const test = firebase.functions().httpsCallable('test');
-const cleanData = firebase.functions().httpsCallable('cleanData');
-const initGame = firebase.functions().httpsCallable('initGTC');
 async function initialize() {
     await initGame();
     await delay(1000);
@@ -366,7 +369,6 @@ function updateChanceCalc(guards,violations){
     document.getElementById(`chance`).innerHTML = `Chance to Catch Violator: ${chance}`
 }
 
-const runTurn = firebase.functions().httpsCallable(`runTurn`)
 async function changeTurn(){
     await runTurn();
     await delay(2000);
@@ -374,3 +376,111 @@ async function changeTurn(){
     showHouses();
 }
 
+function runTurn(){
+    // updates turn #, tree count in database
+    readVal("gtc").then((snapshot) => {
+        const currentTurn = snapshot.turn;
+    
+        // runs through all houses in game
+        const buyWood = snapshot["buyWood"];
+        const sellWood = snapshot["sellWood"];
+    
+        // does all of the computation for each house
+        const houses = Object.keys(snapshot.houses);
+        let forest = snapshot.forest;
+        for (const house of houses) {
+        if (snapshot.houses[house].alive == "true") {
+            const gatheredWood = snapshot.houses[house].currentWood;
+            let excessWood;
+            if (gatheredWood > forest) {
+            excessWood = forest - snapshot.houses[house].reqWood;
+            forest = 0;
+            } else {
+            excessWood = gatheredWood - snapshot.houses[house].reqWood;
+            forest = forest - gatheredWood;
+            }
+            getRef("gtc").update({forest: forest});
+            const houseRef = getRef(`gtc/houses/${house}`);
+            if (excessWood < 0) {
+            const cost = excessWood*buyWood;
+            const currentMoney = snapshot.houses[house].money;
+            const newMoney = currentMoney + cost;
+            houseRef.update({money: newMoney});
+            if (newMoney<0) {
+                houseRef.update({alive: "false"});
+            }
+            }
+            if (excessWood > 0) {
+            const sell = excessWood*sellWood;
+            const currentMoney = snapshot.houses[house].money;
+            const newMoney = currentMoney + sell;
+            houseRef.update({money: newMoney});
+            }
+            houseRef.update({currentWood: 0});
+            // console.log(snapshot.aliveHouses)
+            // for (const member of Object.keys
+            // (snapshot.houses[i]["members"])) {
+            //   // const move = snapshot['houses']
+            // [i]["members"][member]["move"];
+            //   // console.log(maxWood)
+            //   getRef(`gtc/houses/${i}/mem
+            // bers/${member}`).update({gatherWood: maxWood});
+            // }
+        }
+        }
+        const newForest = Math.floor(forest * ((snapshot.growthRate/100)+1));
+        getRef("gtc")
+            .update({start: Math.random(), turn: currentTurn+1, violations: 0,
+            forest: newForest, freeze: "false", guards: 0});
+    });
+}
+
+function initGame(){
+    readVal("gtc/players")
+    .then((snapshot) => {
+      // creates the houses in database
+      const playersArr = snapshot ? Object.keys(snapshot) : [];
+      const numPlayers = playersArr.length;
+      const numHouses = Math.floor((numPlayers + 3) / 4);
+      for (let i=1; i<numHouses+1; i++) {
+        getRef(`gtc/houses/${i}`)
+            .update({money: 12, currentWood: 0, alive: "true"});
+      }
+
+      readVal("gtc/maxWood").then((maxWood) => {
+        for (let i=0; i<numPlayers; i++) {
+          const playerId = playersArr[i];
+          const playerName = snapshot[playerId].name;
+          const house = i%numHouses+1;
+          getRef(`gtc/players/${playerId}`)
+              .update({house: house});
+          getRef(`gtc/houses/${house}/members/\
+${playersArr[i]}`).set({name: playerName, gatherWood: maxWood});
+        }
+      });
+
+      // calculates required amount of wood per house
+      readVal("gtc/houses").then((snapshot) => {
+        const houses = Object.keys(snapshot);
+        for (const house of houses) {
+          let numMembers = 0;
+          const members = Object.keys(snapshot[house]["members"]);
+          for (let i=0; i<members.length; i++) {
+            numMembers += 1;
+          }
+          const reqWood = Math.floor((numMembers+1)/2);
+          getRef(`gtc/houses/${house}`)
+              .update({reqWood: reqWood});
+        }
+      });
+
+      // initializes initial conditions
+      getRef("gtc").update({
+        forest: 100, turn: 1, maxWood: 2, violations: 0,
+        plantWood: 1, sellWood: 1, buyWood: 3, guards: 0,
+        growthRate: 20, start: Math.random(), freeze: "false"});
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+}

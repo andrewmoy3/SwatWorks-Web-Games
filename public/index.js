@@ -1,20 +1,24 @@
 //once authorization state changes, add player to firebase
+let initialCheck = false;
 firebase.auth().onAuthStateChanged((user) => {
-  if(user){
-    let playerId = user.uid;
-    let username = user.displayName;
-    showGames();
+  if(initialCheck == false){
+    initialCheck = true;
+    if(user){
+      let playerId = user.uid;
+      let username = user.displayName;
+      showGames();
 
-    let playerRef = firebase.database().ref(`players/${playerId}`);
-    playerRef.set({
-      id: playerId,
-      name: username,
-    })
+      let playerRef = firebase.database().ref(`players/${playerId}`);
+      playerRef.set({
+        id: playerId,
+        name: username,
+      })
 
-    playerRef.onDisconnect().remove();
+      playerRef.onDisconnect().remove();
 
-  } else {
-    showSignIn();
+    } else {
+      showSignIn();
+    }
   }
 })
 
