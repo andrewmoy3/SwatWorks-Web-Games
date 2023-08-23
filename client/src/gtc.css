@@ -1,0 +1,233 @@
+html {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  font-family: Papyrus, Helvetica, Arial, sans-serif;
+  background-color: #deb887;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+}
+
+#header {
+  font-weight: bold;
+  font-size: 64px;
+}
+
+#gameBody {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+#constContainer {
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#varContainer,
+#constants,
+#calc,
+#customRulesDiv {
+  width: 100%;
+}
+
+#customRulesDiv {
+  max-height: 25%;
+  overflow-y: auto;
+}
+
+#numberDiv {
+  display: flex;
+  justify-content: space-between;
+}
+
+#nextTurn {
+  width: 10%;
+  height: 5%;
+  margin-bottom: 100px;
+}
+
+#housemates {
+  display: flex;
+  width: 25%;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#constContainer {
+  height: 100%;
+}
+
+#varContainer,
+#display,
+#constants,
+#calc,
+#customRulesDiv {
+  border: 4px solid black;
+  background-color: white;
+  border-radius: 10px;
+}
+
+#title {
+  font-size: 48px;
+  font-weight: bold;
+  padding: 32px;
+}
+
+button {
+  font-family: Papyrus;
+  background-color: gray;
+  color: black;
+  border-color: white;
+  border-radius: 8px;
+  padding: 0;
+  margin: 0;
+  /* width: 10%;
+    height: 5%; */
+}
+
+#options {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: space-evenly;
+  width: 25%;
+  height: 25%;
+}
+
+#gatherContainer {
+  display: flex;
+}
+
+.violation {
+  color: red;
+}
+
+#waitingRoom {
+  background-color: white;
+  width: 50%;
+  height: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+  align-items: center;
+  padding: 20px;
+}
+
+#playerList {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 50px;
+}
+
+.title {
+  font-weight: bold;
+  font-size: 36px;
+  padding: 50px;
+}
+
+.subTitle {
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.selected {
+  border-width: 5px;
+  border-color: red;
+}
+
+#display {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 75%;
+  height: 75%;
+}
+
+.variable {
+  display: flex;
+  justify-content: space-between;
+}
+
+.varContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#violationsContainer {
+  display: flex;
+}
+
+.eliminated {
+  color: red;
+}
+
+.house {
+  /* SWTICH TO GRID; */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.house .houseMoney {
+  font-weight: bold;
+  font-size: 24px;
+}
+
+.house .currentWood {
+  font-weight: bold;
+  font-size: 24px;
+}
+
+.houseMoneyContainer,
+.currentWoodContainer {
+  display: flex;
+}
+
+.house .player {
+  font-size: 16px;
+  font-weight: normal;
+  font-style: italic;
+}
+
+.arrow {
+  display: inline-block;
+  font-size: 1.5em;
+  line-height: 1em;
+  vertical-align: middle;
+}
+
+.arrow.up {
+  border: solid black;
+  border-width: 0 2px 2px 0;
+  content: "";
+  display: inline-block;
+  padding: 3px;
+  transform: rotate(-135deg);
+}
+
+.arrow.down {
+  border: solid black;
+  border-width: 0 2px 2px 0;
+  content: "";
+  display: inline-block;
+  padding: 3px;
+  transform: rotate(45deg);
+}

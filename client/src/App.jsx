@@ -1,8 +1,10 @@
-// import { useState } from 'react'
-import "./App.css";
+import { useState } from "react";
+import Games from "./Games";
+import SignIn from "./SignIn";
 
 function App() {
-  return <></>;
+  const [auth, setAuth] = useState(false);
+  return <>{auth ? <Games /> : <SignIn />}</>;
 }
 
 export default App;
