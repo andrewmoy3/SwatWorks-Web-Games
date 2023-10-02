@@ -23,7 +23,7 @@ A real-time multiplayer web interface was created to solve this issue. The imple
 
 ### Professor View
 
-![[./public/profView.gif]]
+![Professor View](./public/profView.gif)
 
 ## Reflection
 
