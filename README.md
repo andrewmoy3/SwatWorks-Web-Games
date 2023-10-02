@@ -28,6 +28,7 @@ A real-time multiplayer web interface was created to solve this issue. The imple
 ## Reflection
 
 Last Updated: October 2, 2023
+
 Having now learned full-stack web development in a structured curriculum, I look back on this project as extremely beginner/amateur. There are no build tools like Vite or Webpack, and there are no npm packages installed/used. It is solely HTML, JavaScript, and a minimal amount of CSS, and the database updates are functional but executed client-side, and allow for potential data manipulation. There are also many bugs created by the structure of the code, but this can also be attributed to the lack of frameworks/libraries used.
 
 However, the website is a functional multiplayer game that fully implements the provided game script. It includes authentication and a real-time database, and can be used in a live classroom. In the near future, I hope to rebuild the entire project using my updated knowledge to make it smoother, more structured, less buggy, and more visually appealing.
