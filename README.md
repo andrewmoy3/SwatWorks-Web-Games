@@ -2,7 +2,7 @@
 
 ## Description
 
-This project was created as part of a winter internship for a history professor at St. John's University during the winter of 2022-2023, as part of Swarthmore Colleges "SwatWorks" program.
+This project was created as part of a winter internship for a history professor at St. John's University during the winter of 2022-2023, as part of Swarthmore College's "SwatWorks" program.
 
 The project was designed to implement a set of educational game scripts designed by the professor. These games were played between 20 to 25 live students, but required tedious, manual calculations, so an online implementation was required to save time.
 
